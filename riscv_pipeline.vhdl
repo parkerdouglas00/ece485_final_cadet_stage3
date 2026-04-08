@@ -51,6 +51,7 @@ architecture Behavioral of riscv_pipeline is
     signal reg_write, reg_write_chip  : STD_LOGIC;
     signal rs1, rs2, rd : STD_LOGIC_VECTOR(4 downto 0);
     signal wb_rd        : STD_LOGIC_VECTOR(4 downto 0);
+    signal alu_op : STD_LOGIC_VECTOR(3 downto 0);
        
     -- Registers for pipeline stages
     signal if_id_npc, id_ex_npc, ex_mem_npc, mem_wb_npc             : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
@@ -165,15 +166,33 @@ architecture Behavioral of riscv_pipeline is
             start_stall : in  STD_LOGIC;
             stall_counter : in integer;
 
+                -- inputs from IF stage
+            reg_write : in STD_LOGIC;
+            alu_src : in STD_LOGIC;
+            mem_read : in STD_LOGIC;
+            mem_write : in STD_LOGIC;
+            branch : in STD_LOGIC;
+            jump : in STD_LOGIC;
+            load_addr : in STD_LOGIC;
+            instr : in  STD_LOGIC_VECTOR(31 downto 0);
+            npc    : in  STD_LOGIC_VECTOR(31 downto 0);
+            -- <add other IF registers?>
+            
             -- IF/ID pipeline registers
-            if_id_reg_write : in STD_LOGIC;
-            if_id_alu_src : in STD_LOGIC;
-            if_id_mem_read : in STD_LOGIC;
-            if_id_mem_write : in STD_LOGIC;
-            if_id_branch : in STD_LOGIC;
-            if_id_jump : in STD_LOGIC;
-            if_id_load_addr : in STD_LOGIC;
-            if_id_instr : in  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_reg_write : inout STD_LOGIC;
+            if_id_alu_src : inout STD_LOGIC;
+            if_id_mem_read : inout STD_LOGIC;
+            if_id_mem_write : inout STD_LOGIC;
+            if_id_branch : inout STD_LOGIC;
+            if_id_jump : inout STD_LOGIC;
+            if_id_load_addr : inout STD_LOGIC;
+            if_id_instr : inout  STD_LOGIC_VECTOR(31 downto 0);
+            
+            if_id_reg1_data  : in  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_reg2_data  : in  STD_LOGIC_VECTOR(31 downto 0);
+            if_id_imm        : in  STD_LOGIC_VECTOR(31 downto 0);
+            
+            if_id_alu_op : inout STD_LOGIC_VECTOR(3 downto 0);
             -- <add other if_id registers>
            
             -- ID/EX pipeline registers
@@ -216,13 +235,13 @@ architecture Behavioral of riscv_pipeline is
     component hazard_detection_unit is
         Port (
             reset :          in STD_LOGIC;
-            id_ex_mem_read : in STD_LOGIC;
-            id_ex_load_addr : in STD_LOGIC;
+            if_id_mem_read : in STD_LOGIC;
+            if_id_load_addr : in STD_LOGIC;
+            instr    : in STD_LOGIC_VECTOR(31 downto 0);
             if_id_instr    : in STD_LOGIC_VECTOR(31 downto 0);
-            id_ex_instr    : in STD_LOGIC_VECTOR(31 downto 0);
-            id_ex_rd       : in STD_LOGIC_VECTOR(4 downto 0);
-            if_id_rs1      : in STD_LOGIC_VECTOR(4 downto 0);
-            if_id_rs2      : in STD_LOGIC_VECTOR(4 downto 0);
+            if_id_rd       : in STD_LOGIC_VECTOR(4 downto 0);
+            rs1      : in STD_LOGIC_VECTOR(4 downto 0);
+            rs2      : in STD_LOGIC_VECTOR(4 downto 0);
             -- need any other input registers?
             stall_counter  : in integer range 0 to 3 := 0;
             start_stall    : out STD_LOGIC
@@ -262,6 +281,20 @@ begin
             reset  => reset,
             start_stall => start_stall,
             stall_counter => stall_counter,
+            -- inputs from IF
+            reg_write => <what control signal?>,
+            alu_src => <what control signal?>,
+            mem_read => <what control signal?>,
+            mem_write => <what control signal?>,
+            branch => <what control signal?>,
+            jump => <what control signal?>,
+            load_addr => <what control signal?>,
+            instr => <what register?>,
+            npc => <what register?>,
+            rd => instr(<define bit> downto<define bit>)),
+            alu_op => <what signal?>,
+            -- <add other IF registers?>
+            
             -- IF/ID pipeline registers
             if_id_reg_write => if_id_reg_write,
             if_id_alu_src => if_id_alu_src,
@@ -313,16 +346,10 @@ begin
             addr  => pc_byte_not_word,
             instr => instr
         );   
-    -- IF/ID pipeline registers
-    if_id_instr <= instr;
-    if_id_npc    <= NPC;
 
-    -- Decode instruction fields
-    if_id_rs1 <= if_id_instr(<define bit> downto<define bit>);
-    if_id_rs2 <= if_id_instr(<define bit> downto<define bit>);
-    if_id_rd  <= if_id_instr(<define bit> downto<define bit>);
+    -- IF units
+    -- decode instruction
     opcode <= if_id_instr(<define bit> downto<define bit>);
-
     -- Control unit
     control_unit_inst: control_unit
         port map (
@@ -335,33 +362,26 @@ begin
             load_addr => load_addr,
             jump      => jump
         );
-    if_id_reg_write <= reg_write;
-	if_id_mem_read <= mem_read;
-	if_id_mem_write <= mem_write;
-	if_id_alu_src <= alu_src;
-	if_id_branch <= branch;
-	if_id_load_addr <= load_addr;
-	if_id_jump	<= jump;
 
     -- ALU control unit
     alu_control_inst: alu_control
             port map (
-                funct3 => if_id_instr(<define bit> downto<define bit>),
-                funct7 => (<define bit> downto<define bit>),
-                alu_op => if_id_alu_op
+                funct3 => instr(<define bit> downto <define bit>),
+                funct7 => instr(<define bit> downto <define bit>),
+                alu_op => <what signal?>
             );
 	
     -- Instantiate hazard detection unit
     hazard_unit: hazard_detection_unit
         port map (
             reset => reset,
-            id_ex_mem_read => id_ex_mem_read,
-            id_ex_load_addr => id_ex_load_addr,
-            if_id_instr    => if_id_instr,
-            id_ex_instr    => id_ex_instr,
-            id_ex_rd       => id_ex_rd,
-            if_id_rs1      => if_id_rs1,
-            if_id_rs2      => if_id_rs2,
+            if_id_mem_read => <what control signal?>,
+            if_id_load_addr => <what control signal?>,
+            instr    => <what signal?>,
+            if_id_instr    => <what signal?>,
+            if_id_rd       => <what signal?>,
+            rs1      => instr(<define bit> downto <define bit>),
+            rs2      => instr(<define bit> downto <define bit>),
             -- need any other input registers?
             stall_counter  => stall_counter,
             start_stall    => start_stall
@@ -390,20 +410,18 @@ begin
     -- ID units
 
     -- Register file [used in ID and WB stages]
-	reg_write_chip <= mem_wb_reg_write;
     reg_file_inst: reg_file
         port map (
             clk       => clk,
-            reg_write => reg_write_chip,
-            rs1       => if_id_rs1,
-            rs2       => if_id_rs2,
-            rd        => mem_wb_rd,
+            reg_write => <what signal?>,
+            rs1       => if_id_instr(<define bit> downto <define bit>),
+            rs2       => if_id_instr(<define bit> downto <define bit>),
+            rd        => <what signal?>,
             data_in   => wb_data,
-            data_out1 => reg1_data,
-            data_out2 => reg2_data
+            data_out1 => <which_register>,
+            data_out2 => <which_register>
         );    
-    if_id_reg1_data <= reg1_data;  
-    if_id_reg2_data <= reg2_data;
+
        
     -- Immediate generator
         immediate_generator_inst: immediate_generator

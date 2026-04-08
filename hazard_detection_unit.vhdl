@@ -5,13 +5,13 @@ use IEEE.NUMERIC_STD.ALL;
 entity hazard_detection_unit is
     Port (
         reset :          in STD_LOGIC;
-        id_ex_mem_read : in STD_LOGIC;
-        id_ex_load_addr : in STD_LOGIC;
-        if_id_instr    : in STD_LOGIC_VECTOR(31 downto 0);
-        id_ex_instr    : in STD_LOGIC_VECTOR(31 downto 0);
-        id_ex_rd       : in STD_LOGIC_VECTOR(4 downto 0);
-        if_id_rs1      : in STD_LOGIC_VECTOR(4 downto 0);
-        if_id_rs2      : in STD_LOGIC_VECTOR(4 downto 0);
+        if_id_mem_read : in STD_LOGIC;                      -- previous instr mem read
+        if_id_load_addr : in STD_LOGIC;                     -- previous instr load addr
+        instr    : in STD_LOGIC_VECTOR(31 downto 0);        -- current  instr
+        if_id_instr    : in STD_LOGIC_VECTOR(31 downto 0);  -- previous instr
+        if_id_rd       : in STD_LOGIC_VECTOR(4 downto 0);   -- previous instr destination register
+        rs1      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
+        rs2      : in STD_LOGIC_VECTOR(4 downto 0);         -- current  instr source register
         -- need any other input registers?
         stall_counter  : in integer range 0 to 3 := 0;
         start_stall    : out STD_LOGIC
@@ -20,12 +20,13 @@ end hazard_detection_unit;
 
 -- NOTE: only looking  one instruction before dependency (not two or three before)
 architecture Behavioral of hazard_detection_unit is
-   signal if_id_opcode, id_ex_opcode       : STD_LOGIC_VECTOR(6 downto 0);
+   signal opcode, if_id_opcode       : STD_LOGIC_VECTOR(6 downto 0);
    signal double_stall : STD_LOGIC := '0';
 begin
-    -- would opcodes of instructions be useful?
-    
-    process(id_ex_mem_read, id_ex_rd, if_id_rs1, if_id_rs2, id_ex_opcode, if_id_opcode, stall_counter -- any others?)
+    -- would opcodes of current and previous instructions be useful?
+    opcode <= instr(<define bit> downto <define bit>));
+    if_id_opcode <= if_id_instr(<define bit> downto <define bit>));
+    process(if_id_mem_read, if_id_rd, rs1, rs2, if_id_opcode, opcode, stall_counter -- any others?)
     begin      
         if (reset = '1') then
             start_stall <= '0';
