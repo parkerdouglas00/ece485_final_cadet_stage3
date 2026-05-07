@@ -157,7 +157,7 @@ begin
                 if_id_rd        <= rd;
             end if;
 
-            if (start_stall = '1' or stall_counter > 0) then
+            if (start_stall = '1' or stall_counter = 3 or stall_counter = 2) then
                 id_ex_reg_write <= '0';
                 id_ex_alu_src   <= '0';
                 id_ex_mem_read  <= '0';
